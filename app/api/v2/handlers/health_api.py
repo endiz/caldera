@@ -29,6 +29,8 @@ class HealthApi(BaseApi):
             'application': 'Caldera',
             'version': app.get_version(),
             'access': access[0].name,
+            'role': await self._auth_svc.get_role(request),
+            'can_write': await self._auth_svc.request_can_write(request),
             'plugins': loaded_plugins_sorted
         }
 

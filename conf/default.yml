@@ -1,8 +1,8 @@
 ability_refresh: 60
-client_max_size_mb: 1
+api_key_blue: $argon2id$v=19$m=65536,t=3,p=4$l04qIJNvy+/uT0rTvdn+UA$adkRLKq5HC2v8d8W2O02RcrQhfU7p4RWp1MOe/bbUy4
+api_key_purple: $argon2id$v=19$m=65536,t=3,p=4$OuZfkfLUbpf4XVfH02GN4g$tOKQ1TZCA0i1VBwFckloJ5OKGQlPQDVJ+Iscxe3FRZk
+api_key_red: $argon2id$v=19$m=65536,t=3,p=4$93IHJ395bnauLqQoCV5C5Q$4DnKbTfqSrWCPfT+/VvQKWrhUpu9xe15YkLcKd4mgWo
 api_upload_max_size_mb: 100
-api_key_blue: BLUEADMIN123
-api_key_red: ADMIN123
 app.contact.dns.domain: mycaldera.caldera
 app.contact.dns.socket: 0.0.0.0:8853
 app.contact.ftp.host: 0.0.0.0
@@ -25,9 +25,9 @@ app.contact.tunnel.ssh.user_password: s4ndc4t!
 app.contact.udp: 0.0.0.0:7011
 app.contact.websocket: 0.0.0.0:7012
 auth.login.handler.module: default
+client_max_size_mb: 1
 crypt_salt: REPLACE_WITH_RANDOM_VALUE
 encryption_key: ADMIN123
-session_expiration_days: 7
 exfil_dir: /tmp/caldera
 host: 0.0.0.0
 objects.planners.default: atomic
@@ -57,9 +57,12 @@ requirements:
     module: sys
     type: python_module
     version: 3.9.0
+session_expiration_days: 7
 users:
   blue:
-    blue: admin
+    blue: $argon2id$v=19$m=65536,t=3,p=4$rL6KNQJr1GLv8Qntkoh52g$2g3C5FaiCiAzWAQNM9noBiBTSnifnujOCE+REQvC1ao
+  purple:
+    purple: $argon2id$v=19$m=65536,t=3,p=4$GeWPpfyAkz/tAs0ksF/8QA$SSedL3RL6qixRW3BoRxJ23Yz2+UadZ8Gpw5lFABbcIY
   red:
-    admin: admin
-    red: admin
+    admin: $argon2id$v=19$m=65536,t=3,p=4$drd75bQ/Dfwg0ZD5BbU0Eg$GsU6QekGf8gVDrlag2OXlNK/wNv/GCm2rOc6eJmHZOs
+    red: $argon2id$v=19$m=65536,t=3,p=4$V6jTQI9AhqTa3g0XhtcMRA$flFQC2wg0bd4LC6u0WWcQDpzgddwfKl/jX06enTC7ks

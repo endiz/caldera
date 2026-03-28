@@ -119,6 +119,19 @@ class TestOperationsApi:
         resp = await api_v2_client.post('/api/v2/operations/123/report')
         assert resp.status == HTTPStatus.UNAUTHORIZED
 
+    async def test_purple_can_get_operation_report(self, api_v2_client, purple_api_cookies, mocker, async_return,
+                                                   test_operation):
+        with mocker.patch('app.objects.c_operation.Operation.all_facts') as mock_all_facts:
+            mock_all_facts.return_value = async_return([])
+            resp = await api_v2_client.post('/api/v2/operations/123/report', cookies=purple_api_cookies)
+            assert resp.status == HTTPStatus.OK
+
+    async def test_purple_api_key_can_get_operation_report(self, api_v2_client, mocker, async_return, test_operation):
+        with mocker.patch('app.objects.c_operation.Operation.all_facts') as mock_all_facts:
+            mock_all_facts.return_value = async_return([])
+            resp = await api_v2_client.post('/api/v2/operations/123/report', headers={'KEY': 'PURPLEADMIN123'})
+            assert resp.status == HTTPStatus.OK
+
     async def test_nonexistent_operation_get_operation_report(self, api_v2_client, api_cookies):
         resp = await api_v2_client.post('/api/v2/operations/999/report', cookies=api_cookies)
         assert resp.status == HTTPStatus.NOT_FOUND
@@ -161,6 +174,11 @@ class TestOperationsApi:
     async def test_unauthorized_get_operation_event_logs(self, api_v2_client):
         resp = await api_v2_client.post('/api/v2/operations/123/event-logs')
         assert resp.status == HTTPStatus.UNAUTHORIZED
+
+    async def test_purple_can_get_operation_event_logs(self, api_v2_client, purple_api_cookies, test_operation,
+                                                       finished_link, test_agent):
+        resp = await api_v2_client.post('/api/v2/operations/123/event-logs', cookies=purple_api_cookies)
+        assert resp.status == HTTPStatus.OK
 
     async def test_nonexistent_operation_get_operation_event_logs(self, api_v2_client, api_cookies):
         resp = await api_v2_client.post('/api/v2/operations/999/event-logs', cookies=api_cookies)
@@ -212,6 +230,12 @@ class TestOperationsApi:
         resp = await api_v2_client.post('/api/v2/operations', json=payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
 
+    async def test_purple_cannot_create_operation(self, api_v2_client, purple_api_cookies):
+        payload = dict(name='post_test', planner={'id': '123'},
+                       adversary={'adversary_id': '123'}, source={'id': '123'})
+        resp = await api_v2_client.post('/api/v2/operations', cookies=purple_api_cookies, json=payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
+
     async def test_update_operation(self, api_v2_client, api_cookies, mocker, async_return, test_operation):
         op_manager_path = 'app.api.v2.managers.operation_api_manager.OperationApiManager.validate_operation_state'
         with mocker.patch(op_manager_path) as mock_validate:
@@ -230,6 +254,11 @@ class TestOperationsApi:
         payload = dict(state='running', obfuscator='base64')
         resp = await api_v2_client.patch('/api/v2/operations/123', json=payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
+
+    async def test_purple_cannot_update_operation(self, api_v2_client, purple_api_cookies):
+        payload = dict(state='running', obfuscator='base64')
+        resp = await api_v2_client.patch('/api/v2/operations/123', cookies=purple_api_cookies, json=payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
 
     async def test_nonexistent_operation_update(self, api_v2_client, api_cookies):
         payload = dict(state='running', obfuscator='base64')
@@ -303,6 +332,11 @@ class TestOperationsApi:
         payload = dict(command='ls')
         resp = await api_v2_client.patch('/api/v2/operations/123/links/456', json=payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
+
+    async def test_purple_cannot_update_operation_link(self, api_v2_client, purple_api_cookies):
+        payload = dict(command='ls')
+        resp = await api_v2_client.patch('/api/v2/operations/123/links/456', cookies=purple_api_cookies, json=payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
 
     async def test_nonexistent_operation_update_operation_link(self, api_v2_client, api_cookies):
         payload = dict(command='ls')

@@ -18,6 +18,7 @@ SENSITIVE_CONF = {
     'app.contact.http': '0.0.0.0',
     'plugins': ['sandcat', 'stockpile'],
     'api_key_blue': 'testapikeyblue',
+    'api_key_purple': 'testapikeypurple',
     'api_key_red': 'testapikeyred',
     'users': {
         'group1': {
@@ -54,6 +55,7 @@ class TestConfigUtil:
         assert hash_config_creds(config)
         assert SENSITIVE_CONF != config
         assert verify_hash(config['api_key_blue'], 'testapikeyblue')
+        assert verify_hash(config['api_key_purple'], 'testapikeypurple')
         assert verify_hash(config['api_key_red'], 'testapikeyred')
         assert verify_hash(config['users']['group1']['user1'], 'testpassword1')
         assert verify_hash(config['users']['group2']['user2'], 'testpassword2')
@@ -72,6 +74,7 @@ class TestConfigUtil:
                     'app.contact.http': '0.0.0.0',
                     'plugins': ['sandcat', 'stockpile'],
                     'api_key_blue': 'mockhash',
+                    'api_key_purple': 'mockhash',
                     'api_key_red': 'mockhash',
                     'crypt_salt': 'mocksecret',
                     'encryption_key': 'mocksecret',
@@ -81,6 +84,9 @@ class TestConfigUtil:
                         },
                         'blue': {
                             'blue': 'mockhash',
+                        },
+                        'purple': {
+                            'purple': 'mockhash',
                         },
                     }
                 }
@@ -107,6 +113,10 @@ class TestConfigUtil:
         assert config['api_key_blue'].startswith('$argon2id$'), (
             "api_key_blue should be an argon2 hash after make_secure_config, got: %r" % config['api_key_blue']
         )
+        assert config['api_key_purple'].startswith('$argon2id$'), (
+            "api_key_purple should be an argon2 hash after make_secure_config, got: %r" % config['api_key_purple']
+        )
         assert config['api_key_red'].startswith('$argon2id$'), (
             "api_key_red should be an argon2 hash after make_secure_config, got: %r" % config['api_key_red']
         )
+        assert 'Purple (read-only):' in logged_message

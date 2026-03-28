@@ -11,6 +11,7 @@ from aiohttp_security.abc import AbstractAuthorizationPolicy
 from aiohttp_session import setup as setup_session
 from aiohttp_session.cookie_storage import EncryptedCookieStorage
 
+from app.api.v2.security import read_only_middleware_factory
 from app.service.interfaces.i_auth_svc import AuthServiceInterface
 from app.service.interfaces.i_login_handler import LoginHandlerInterface
 from app.service.login_handlers.default import DefaultLoginHandler
@@ -22,7 +23,19 @@ HEADER_API_KEY = 'KEY'
 COOKIE_SESSION = 'API_SESSION'
 CONFIG_API_KEY_RED = 'api_key_red'
 CONFIG_API_KEY_BLUE = 'api_key_blue'
+CONFIG_API_KEY_PURPLE = 'api_key_purple'
 CONFIG_AUTH_LOGIN_HANDLER = 'auth.login.handler.module'
+READ_ONLY_ROLES = frozenset(['purple'])
+ROLE_ACCESS_PERMISSIONS = {
+    'red': ('red', 'app'),
+    'blue': ('blue', 'app'),
+    'purple': ('red', 'app')
+}
+API_KEY_ROLES = (
+    (CONFIG_API_KEY_RED, 'red'),
+    (CONFIG_API_KEY_BLUE, 'blue'),
+    (CONFIG_API_KEY_PURPLE, 'purple')
+)
 
 
 def for_all_public_methods(decorator):
@@ -53,7 +66,7 @@ def check_authorization(func):
 
 
 class AuthService(AuthServiceInterface, BaseService):
-    User = namedtuple('User', ['username', 'password', 'permissions'])
+    User = namedtuple('User', ['username', 'password', 'permissions', 'role', 'can_write'])
 
     def __init__(self):
         self.user_map = dict()
@@ -104,9 +117,14 @@ class AuthService(AuthServiceInterface, BaseService):
         setup_session(app, storage)
         policy = SessionIdentityPolicy()
         setup_security(app, policy, DictionaryAuthorizationPolicy(self.user_map))
+        if not app.get('read_only_middleware_enabled'):
+            app.middlewares.append(read_only_middleware_factory(self))
+            app['read_only_middleware_enabled'] = True
 
     async def create_user(self, username, password, group):
-        self.user_map[username] = self.User(username, password, (group, 'app'), )
+        role = group.lower()
+        permissions = ROLE_ACCESS_PERMISSIONS.get(role, (role, 'app'))
+        self.user_map[username] = self.User(username, password, permissions, role, role not in READ_ONLY_ROLES)
 
     @staticmethod
     async def logout_user(request):
@@ -164,14 +182,17 @@ class AuthService(AuthServiceInterface, BaseService):
                 raise e
 
     def request_has_valid_api_key(self, request):
+        return self._get_request_api_key_role(request) is not None
+
+    def _get_request_api_key_role(self, request):
         request_api_key = request.headers.get(HEADER_API_KEY)
         if request_api_key is None:
-            return False
-        for i in [CONFIG_API_KEY_RED, CONFIG_API_KEY_BLUE]:
-            hashed_api_key = self.get_config(i)
+            return None
+        for config_key, role in API_KEY_ROLES:
+            hashed_api_key = self.get_config(config_key)
             if hashed_api_key is not None and verify_hash(hashed_api_key, request_api_key):
-                return True
-        return False
+                return role
+        return None
 
     async def request_has_valid_user_session(self, request):
         return await aiohttp_security_api.authorized_userid(request) is not None
@@ -191,15 +212,31 @@ class AuthService(AuthServiceInterface, BaseService):
             return await self.login_redirect(request, use_template=False)
 
     async def get_permissions(self, request):
-        identity_policy = request.config_dict.get('aiohttp_security_identity_policy')
-        identity = await identity_policy.identify(request)
-        if identity in self.user_map:
-            return [self.Access[p.upper()] for p in self.user_map[identity].permissions]
-        elif verify_hash(self.get_config(CONFIG_API_KEY_RED), request.headers.get(HEADER_API_KEY)):
-            return self.Access.RED, self.Access.APP
-        elif verify_hash(self.get_config(CONFIG_API_KEY_BLUE), request.headers.get(HEADER_API_KEY)):
-            return self.Access.BLUE, self.Access.APP
+        user = await self._get_request_user(request)
+        if user:
+            return [self.Access[p.upper()] for p in user.permissions]
+        api_key_role = self._get_request_api_key_role(request)
+        if api_key_role:
+            return [self.Access[p.upper()] for p in ROLE_ACCESS_PERMISSIONS[api_key_role]]
         return ()
+
+    async def get_role(self, request):
+        user = await self._get_request_user(request)
+        if user:
+            return user.role.upper()
+        api_key_role = self._get_request_api_key_role(request)
+        if api_key_role:
+            return api_key_role.upper()
+        return ''
+
+    async def request_can_write(self, request):
+        user = await self._get_request_user(request)
+        if user:
+            return user.can_write
+        api_key_role = self._get_request_api_key_role(request)
+        if api_key_role:
+            return api_key_role not in READ_ONLY_ROLES
+        return True
 
     async def is_request_authenticated(self, request):
         if self.request_has_valid_api_key(request):
@@ -243,6 +280,13 @@ class AuthService(AuthServiceInterface, BaseService):
 
     def _configure_default_login_handler(self, services):
         self._default_login_handler = DefaultLoginHandler(services)
+
+    async def _get_request_user(self, request):
+        identity_policy = request.config_dict.get('aiohttp_security_identity_policy')
+        if not identity_policy:
+            return None
+        identity = await identity_policy.identify(request)
+        return self.user_map.get(identity)
 
 
 class DictionaryAuthorizationPolicy(AbstractAuthorizationPolicy):

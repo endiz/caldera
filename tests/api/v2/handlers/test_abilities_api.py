@@ -112,6 +112,14 @@ class TestAbilitiesApi:
         resp = await api_v2_client.post('/api/v2/abilities', json=new_ability_payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
 
+    async def test_purple_cannot_create_ability(self, api_v2_client, purple_api_cookies, new_ability_payload):
+        resp = await api_v2_client.post('/api/v2/abilities', cookies=purple_api_cookies, json=new_ability_payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
+
+    async def test_purple_api_key_cannot_create_ability(self, api_v2_client, new_ability_payload):
+        resp = await api_v2_client.post('/api/v2/abilities', headers={'KEY': 'PURPLEADMIN123'}, json=new_ability_payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
+
     async def test_create_duplicate_ability(self, api_v2_client, api_cookies, mocker, async_return, test_ability):
         payload = test_ability.schema.dump(test_ability)
         resp = await api_v2_client.post('/api/v2/abilities', cookies=api_cookies, json=payload)
@@ -132,6 +140,11 @@ class TestAbilitiesApi:
     async def test_unauthorized_update_ability(self, api_v2_client, test_ability, updated_ability_payload):
         resp = await api_v2_client.patch('/api/v2/abilities/123', json=updated_ability_payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
+
+    async def test_purple_cannot_update_ability(self, api_v2_client, purple_api_cookies, test_ability,
+                                                updated_ability_payload):
+        resp = await api_v2_client.patch('/api/v2/abilities/123', cookies=purple_api_cookies, json=updated_ability_payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
 
     async def test_update_nonexistent_ability(self, api_v2_client, api_cookies, updated_ability_payload):
         resp = await api_v2_client.patch('/api/v2/abilities/999', cookies=api_cookies, json=updated_ability_payload)

@@ -156,6 +156,11 @@ class TestAdversariesApi:
         resp = await api_v2_client.post('/api/v2/adversaries', json=new_adversary_payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
 
+    async def test_purple_cannot_create_adversary(self, api_v2_client, purple_api_cookies, test_adversary,
+                                                  new_adversary_payload):
+        resp = await api_v2_client.post('/api/v2/adversaries', cookies=purple_api_cookies, json=new_adversary_payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
+
     async def test_create_duplicate_adversary(self, api_v2_client, api_cookies, test_adversary, new_adversary_payload):
         new_adversary_payload['adversary_id'] = test_adversary.adversary_id
         resp = await api_v2_client.post('/api/v2/adversaries', cookies=api_cookies, json=new_adversary_payload)
@@ -192,6 +197,12 @@ class TestAdversariesApi:
     async def test_unauthorized_update_adversary(self, api_v2_client, test_adversary, updated_adversary_payload):
         resp = await api_v2_client.patch('/api/v2/adversaries/123', json=updated_adversary_payload)
         assert resp.status == HTTPStatus.UNAUTHORIZED
+
+    async def test_purple_cannot_update_adversary(self, api_v2_client, purple_api_cookies, test_adversary,
+                                                  updated_adversary_payload):
+        resp = await api_v2_client.patch('/api/v2/adversaries/123', cookies=purple_api_cookies,
+                                         json=updated_adversary_payload)
+        assert resp.status == HTTPStatus.FORBIDDEN
 
     async def test_update_nonexistent_adversary(self, api_v2_client, api_cookies, updated_adversary_payload):
         resp = await api_v2_client.patch('/api/v2/adversaries/999', json=updated_adversary_payload)

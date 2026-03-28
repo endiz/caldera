@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock
 from aiohttp_apispec import validation_middleware
 from aiohttp import web
 import aiohttp_jinja2
+import pytest_asyncio
 from pathlib import Path
 from app.api.v2.handlers.agent_api import AgentApi
 from app.api.v2.handlers.ability_api import AbilityApi
@@ -68,6 +69,15 @@ from app import version
 
 DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_DIR = os.path.join(DIR, '..', 'conf')
+
+
+@pytest.fixture
+def event_loop():
+    loop = asyncio.new_event_loop()
+    try:
+        yield loop
+    finally:
+        loop.close()
 
 
 @pytest.fixture(scope='session')
@@ -309,6 +319,9 @@ def app_config():
             },
             'blue': {
                 'blue': 'password-bar'
+            },
+            'purple': {
+                'purple': 'password-baz'
             }
         }
     }
@@ -411,12 +424,16 @@ async def api_v2_client(aiohttp_client, contact_svc):
     await app_svc._destroy_plugins()
 
 
-@pytest.fixture
-def api_cookies(event_loop, api_v2_client):
-    async def get_cookie():
-        r = await api_v2_client.post('/enter', allow_redirects=False, data=dict(username='admin', password='admin'))
-        return r.cookies
-    return event_loop.run_until_complete(get_cookie())
+@pytest_asyncio.fixture
+async def api_cookies(api_v2_client):
+    r = await api_v2_client.post('/enter', allow_redirects=False, data=dict(username='admin', password='admin'))
+    return r.cookies
+
+
+@pytest_asyncio.fixture
+async def purple_api_cookies(api_v2_client):
+    r = await api_v2_client.post('/enter', allow_redirects=False, data=dict(username='purple', password='admin'))
+    return r.cookies
 
 
 @pytest.fixture

@@ -7,6 +7,7 @@ from app.utility.base_world import BaseWorld
 
 SENSITIVE_CONFIG_PROPS = frozenset([
     'api_key_blue',
+    'api_key_purple',
     'api_key_red',
     'auth.login.handler.module',
     'crypt_salt',

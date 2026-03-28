@@ -10,7 +10,7 @@ from argon2.exceptions import VerifyMismatchError, VerificationError, InvalidHas
 
 
 CONFIG_MSG_TEMPLATE = jinja2.Template("""
-Log into Caldera with the following admin credentials:
+Log into Caldera with the following credentials:
     Red:
     {%- if users.red.red %}
         USERNAME: red
@@ -23,11 +23,17 @@ Log into Caldera with the following admin credentials:
         PASSWORD: {{ users.blue.blue }}
     {%- endif %}
         API_TOKEN: {{ api_key_blue }}
+    Purple (read-only):
+    {%- if users.purple.purple %}
+        USERNAME: purple
+        PASSWORD: {{ users.purple.purple }}
+    {%- endif %}
+        API_TOKEN: {{ api_key_purple }}
 To modify these values, edit the {{ config_path }} file and restart Caldera.
 """)
 LOCAL_CONF_PATH = 'conf/local.yml'
-SECRET_OPTIONS = ('api_key_blue', 'api_key_red', 'crypt_salt', 'encryption_key')
-HASHED_OPTIONS = ('api_key_blue', 'api_key_red')
+SECRET_OPTIONS = ('api_key_blue', 'api_key_purple', 'api_key_red', 'crypt_salt', 'encryption_key')
+HASHED_OPTIONS = ('api_key_blue', 'api_key_purple', 'api_key_red')
 
 
 def _is_hashed(val):
@@ -50,7 +56,7 @@ def verify_hash(hash_val, target):
 
 def hash_config_creds(config):
     """
-    Hashes the red/blue API keys and any user passwords in the config dictionary.
+    Hashes the red/blue/purple API keys and any user passwords in the config dictionary.
     Modifies the configuration dictionary parameter.
     Returns True if any values were modified (hashed), False otherwise.
     """
@@ -81,8 +87,11 @@ def make_secure_config():
     for option in SECRET_OPTIONS:
         config[option] = secrets.token_urlsafe()
 
-    config['users'] = dict(red=dict(red=secrets.token_urlsafe()),
-                           blue=dict(blue=secrets.token_urlsafe()))
+    config['users'] = dict(
+        red=dict(red=secrets.token_urlsafe()),
+        blue=dict(blue=secrets.token_urlsafe()),
+        purple=dict(purple=secrets.token_urlsafe())
+    )
 
     # Display API keys and user credentials, then hash them
     logging.info(CONFIG_MSG_TEMPLATE.render(config_path=LOCAL_CONF_PATH, **config))

@@ -44,3 +44,11 @@ class AuthServiceInterface(abc.ABC):
     @abc.abstractmethod
     def get_permissions(self, request):
         raise NotImplementedError
+
+    @abc.abstractmethod
+    def get_role(self, request):
+        raise NotImplementedError
+
+    @abc.abstractmethod
+    def request_can_write(self, request):
+        raise NotImplementedError
